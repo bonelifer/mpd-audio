@@ -21,8 +21,11 @@
 # Outputs:
 #   Installs bluez and bluealsa. Enables and starts the bluetooth and
 #   bluealsa services. Pairs, trusts, and connects the target device.
-#   Does not modify mpd.conf - prints the audio_output {} block to add
-#   manually, consistent with generate-mpd-conf.sh.
+#   If /etc/mpd.conf already exists, backs it up and appends a new
+#   audio_output block for this device (skipped if one for this MAC is
+#   already present). If /etc/mpd.conf doesn't exist yet, prints the
+#   block instead - generate-mpd-conf.sh will detect this now-paired
+#   device and offer to include it when you run that script.
 #
 # Caveats:
 #   Pairing relies on bluetoothctl's default no-input/no-output agent,
@@ -98,12 +101,47 @@ bluetoothctl connect "${MAC_ADDRESS}"
 
 echo
 echo "Paired, trusted, and connected ${MAC_ADDRESS}."
-echo "Add this to mpd.conf as a local audio_output (see generate-mpd-conf.sh):"
-echo
-echo "audio_output {"
-echo "    type   \"alsa\""
-echo "    name   \"Bluetooth Output\""
-echo "    device \"bluealsa:DEV=${MAC_ADDRESS},PROFILE=a2dp\""
-echo "}"
+
+MPD_CONF="/etc/mpd.conf"
+BT_DEVICE="bluealsa:DEV=${MAC_ADDRESS},PROFILE=a2dp"
+
+# Number the output name if one or more Bluetooth outputs already exist,
+# so multiple devices don't share the same `name`.
+output_name="Bluetooth Output"
+if [ -f "${MPD_CONF}" ]; then
+  existing_count="$(grep -cF "name      \"Bluetooth Output" "${MPD_CONF}" || true)"
+  if [ "${existing_count}" -gt 0 ]; then
+    output_name="Bluetooth Output $((existing_count + 1))"
+  fi
+fi
+
+BT_BLOCK="audio_output {
+    type      \"alsa\"
+    name      \"${output_name}\"
+    device    \"${BT_DEVICE}\"
+    always_on \"yes\"
+}"
+
+if [ -f "${MPD_CONF}" ]; then
+  if grep -qF "${BT_DEVICE}" "${MPD_CONF}"; then
+    echo "An audio_output for ${MAC_ADDRESS} already exists in ${MPD_CONF}; leaving it as-is."
+  else
+    BACKUP_FILE="${MPD_CONF}.bak.$(date +%Y%m%d%H%M%S)"
+    cp "${MPD_CONF}" "${BACKUP_FILE}"
+    echo "Backed up existing ${MPD_CONF} to ${BACKUP_FILE}."
+    {
+      echo
+      echo "${BT_BLOCK}"
+    } >> "${MPD_CONF}"
+    echo "Added a Bluetooth audio_output (\"${output_name}\") for ${MAC_ADDRESS} to ${MPD_CONF}."
+    echo "Restart mpd to pick it up: sudo systemctl restart mpd"
+  fi
+else
+  echo "${MPD_CONF} doesn't exist yet. If you haven't run generate-mpd-conf.sh"
+  echo "yet, it will detect this now-paired device and offer to include it."
+  echo "Otherwise, add this to mpd.conf as a local audio_output yourself:"
+  echo
+  echo "${BT_BLOCK}"
+fi
 
 exit 0

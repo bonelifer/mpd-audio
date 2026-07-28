@@ -41,9 +41,14 @@ you to the menu so you can retry or move on.
    Bluetooth A2DP speaker/receiver and installs BlueALSA so it can be
    added as a local `audio_output` in `mpd.conf`, alongside or instead of
    USB/PCH. If `MAC_ADDRESS` is omitted, it scans for nearby devices (15
-   seconds) and prompts for one (15 second timeout). Run this *before*
-   `generate-mpd-conf.sh`: that script only offers Bluetooth devices that
-   are already paired.
+   seconds) and prompts for one (15 second timeout). If `/etc/mpd.conf`
+   already exists, it backs it up and appends a new `audio_output` block
+   for the device directly (skipped if one for that MAC is already
+   there, so it's safe to re-run); otherwise it just prints the block,
+   since `generate-mpd-conf.sh` (next) will detect this now-paired device
+   and offer to include it in the `mpd.conf` it generates. On first
+   setup, run this *before* `generate-mpd-conf.sh` either way: that
+   script only offers Bluetooth devices that are already paired.
 7. **`generate-mpd-conf.sh`** — detects Creative/Sound Blaster USB audio
    devices, the built-in analog (PCH) output, and Bluetooth A2DP speakers
    already paired via the previous step (or manually with `bluetoothctl`;
@@ -117,7 +122,7 @@ you to the menu so you can retry or move on.
 | `install-docker.sh` | yes (via sudo) | Install Docker CE from the official apt repo; add invoking user to the `docker` group. |
 | `setup-mergerfs.sh` | yes | Pool storage directories with MergerFS as a systemd service. |
 | `build-mpd.sh` | yes | Compile and install MPD from source (meson/ninja). |
-| `setup-bluetooth-audio.sh` | yes | Pair a Bluetooth A2DP device and install BlueALSA for use as an MPD `audio_output`. |
+| `setup-bluetooth-audio.sh` | yes | Pair a Bluetooth A2DP device, install BlueALSA, and add/update its `audio_output` in `mpd.conf` if the file exists. |
 | `generate-mpd-conf.sh` | no | Detect audio hardware and generate `./mpd.conf`. |
 | `install-mympd.sh` | yes | Build/install myMPD and register its systemd service. |
 | `install-mpdris2.sh` | yes (via sudo) | Build/install mpDris2 and write its per-user config. |
@@ -143,11 +148,12 @@ you to the menu so you can retry or move on.
   devices itself.
 - Edit the placeholder values in `setup-mergerfs.sh` (`SOURCE_DIRS`,
   `TARGET_DIR`) and `build-mpd.sh` (`MPD_VERSION`) before running them.
-- `setup-bluetooth-audio.sh` never touches `mpd.conf` either — it prints the
-  `audio_output {}` block to add manually, same as `generate-mpd-conf.sh`.
-  Its pairing flow relies on Simple Secure Pairing (no PIN prompt); devices
-  that require a PIN or on-device confirmation must be paired manually with
-  `bluetoothctl`.
+- `setup-bluetooth-audio.sh` only edits `mpd.conf` if `/etc/mpd.conf`
+  already exists (backing it up first, like `setup-alsa-equalizer.sh`);
+  otherwise it prints the `audio_output {}` block instead, since there's
+  nothing yet to append to. Its pairing flow relies on Simple Secure
+  Pairing (no PIN prompt); devices that require a PIN or on-device
+  confirmation must be paired manually with `bluetoothctl`.
 - `setup-log-rotation.sh` only covers MPD's own log
   (`/var/lib/mpd/log`, set via `log_file` in `mpd.conf`). myMPD and
   mpDris2 run under systemd with no dedicated log file in this setup, so
