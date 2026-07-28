@@ -14,10 +14,10 @@ SUDOER_SCRIPT="./grant-passwordless-sudo.sh"
 INSTALL_APPS_SCRIPT="./install-apps.sh"
 MERGERFS_SCRIPT="./setup-mergerfs.sh"
 MPD_COMPILE_SCRIPT="./build-mpd.sh"
+BLUETOOTH_SCRIPT="./setup-bluetooth-audio.sh"
 GEN_MPD_CONF_SCRIPT="./generate-mpd-conf.sh"
 INSTALL_MYMPD_SCRIPT="./install-mympd.sh"
 INSTALL_MPDRIS2_SCRIPT="./install-mpdris2.sh"
-BLUETOOTH_SCRIPT="./setup-bluetooth-audio.sh"
 LOG_ROTATION_SCRIPT="./setup-log-rotation.sh"
 MPD2CHROMECAST_SCRIPT="./install-mpd2chromecast.sh"
 ALSA_EQUALIZER_SCRIPT="./setup-alsa-equalizer.sh"
@@ -32,10 +32,10 @@ while true; do
     echo "3. Run install-apps.sh"
     echo "4. Run setup-mergerfs.sh"
     echo "5. Run build-mpd.sh"
-    echo "6. Run generate-mpd-conf.sh"
-    echo "7. Run install-mympd.sh"
-    echo "8. Run install-mpdris2.sh"
-    echo "9. Run setup-bluetooth-audio.sh"
+    echo "6. Run setup-bluetooth-audio.sh"
+    echo "7. Run generate-mpd-conf.sh"
+    echo "8. Run install-mympd.sh"
+    echo "9. Run install-mpdris2.sh"
     echo "10. Run setup-log-rotation.sh"
     echo "11. Run install-mpd2chromecast.sh"
     echo "12. Run setup-alsa-equalizer.sh"
@@ -67,20 +67,20 @@ while true; do
             read -r -p "Press Enter to continue..."
             ;;
         6)
+            sudo "${BLUETOOTH_SCRIPT}"
+            read -r -p "Press Enter to continue..."
+            ;;
+        7)
             # Does not need root; runs as the invoking user
             "${GEN_MPD_CONF_SCRIPT}"
             read -r -p "Press Enter to continue..."
             ;;
-        7)
+        8)
             sudo "${INSTALL_MYMPD_SCRIPT}"
             read -r -p "Press Enter to continue..."
             ;;
-        8)
-            sudo "${INSTALL_MPDRIS2_SCRIPT}"
-            read -r -p "Press Enter to continue..."
-            ;;
         9)
-            sudo "${BLUETOOTH_SCRIPT}"
+            sudo "${INSTALL_MPDRIS2_SCRIPT}"
             read -r -p "Press Enter to continue..."
             ;;
         10)

@@ -3,7 +3,8 @@
 # setup-alsa-equalizer.sh - Install a 10-band ALSA-level equalizer
 # (libasound2-plugin-equal, aka alsaequal) wrapping a chosen output
 # device, plus an "mpd-eq" helper for saving/loading named EQ profiles
-# as plain text.
+# as plain text, with the same built-in presets as the alsaequal-web-api
+# project's browser/HTTP front-end.
 #
 # libasound2-plugin-equal stores its band gains in an opaque binary file
 # (default ~/.alsaequal.bin) that you can only edit through an ALSA mixer
@@ -15,6 +16,12 @@
 # https://github.com/perfinion/alsaequal-scripties (unmaintained since
 # 2011, GUI/Python 2 parts unusable on a headless box) - only that idea
 # is reused here, not its code.
+#
+# mpd-eq also ships the same 21 built-in presets (by name and per-band
+# value) as https://github.com/bonelifer/alsaequal-web-api's app.py, so
+# `sudo mpd-eq load rock` and that project's `/eq/rock` endpoint apply
+# identical settings. A saved profile takes priority over a built-in of
+# the same name.
 #
 # After running this script, point MPD's local audio_output at the "equal"
 # PCM instead of the raw device, e.g.:
@@ -40,7 +47,7 @@
 #   existing /etc/asound.conf, then writes a new one defining the "equal"
 #   ctl/pcm. Creates /var/lib/mpd/alsaequal (profiles dir + controls
 #   file), owned by mpd:mpd. Installs /usr/local/bin/mpd-eq
-#   (save|load|list).
+#   (save|load|list|presets).
 
 set -euo pipefail
 
@@ -117,15 +124,53 @@ cat <<'EOF' > /usr/local/bin/mpd-eq
 # device set up by setup-alsa-equalizer.sh. Profiles are plain text
 # ("control_name:value" per line, value in percent), so they can be
 # committed, diffed, and edited by hand.
+#
+# Also ships the same built-in presets as
+# https://github.com/bonelifer/alsaequal-web-api's app.py, as 10-band
+# (31/63/125/250/500/1k/2k/4k/8k/16k Hz) percentage values, so `mpd-eq
+# load rock` and that project's `/eq/rock` apply identical settings. The
+# two PRESETS tables are maintained by hand in each project - keep them
+# in sync if you add or change a preset. Built-in presets are applied
+# positionally against whatever `amixer -D equal scontrols` reports, in
+# ascending frequency order, the
+# same way `save`/`load` already discover
+# real control names - so no hardcoded band-name string is needed here.
+# A saved profile of the same name always takes priority over a built-in.
 
 set -euo pipefail
 
 PROFILES_DIR="/var/lib/mpd/alsaequal/profiles"
 
+# name -> "31 63 125 250 500 1k 2k 4k 8k 16k" band levels, 0-100%
+declare -A PRESETS=(
+  [flat]="50 50 50 50 50 50 50 50 50 50"
+  [off]="50 50 50 50 50 50 50 50 50 50"
+  [vocal]="55 48 45 65 60 68 70 66 58 52"
+  [vocal_male]="62 58 48 64 58 64 68 62 54 50"
+  [vocal_female]="52 45 42 68 62 70 72 68 60 54"
+  [speech]="48 45 55 70 58 68 72 70 62 50"
+  [rock]="70 60 45 65 55 60 68 70 64 58"
+  [pop]="65 58 50 60 55 58 62 64 60 56"
+  [metal]="75 65 40 68 50 58 68 74 68 60"
+  [hip_hop]="75 70 50 58 52 54 56 58 56 52"
+  [rap]="72 68 48 62 54 60 64 62 56 52"
+  [jazz]="60 55 55 58 56 58 60 58 54 52"
+  [blues]="65 62 52 60 56 60 62 60 54 50"
+  [classical]="55 52 52 56 54 56 58 56 54 52"
+  [ambient]="52 50 48 54 52 54 56 54 56 58"
+  [electronic]="70 65 48 65 52 56 62 66 64 60"
+  [edm]="78 72 45 70 50 54 64 72 68 62"
+  [bass_boost]="66 56 48 62 54 50 50 48 46 44"
+  [treble_boost]="45 50 60 68 58 64 68 72 74 76"
+  [warm]="58 56 54 52 52 50 48 46 44 42"
+  [bright]="52 54 56 62 64 66 68 70 72 74"
+)
+
 usage() {
   echo "Usage: mpd-eq save <profile_name>" >&2
   echo "       mpd-eq load <profile_name>" >&2
   echo "       mpd-eq list" >&2
+  echo "       mpd-eq presets" >&2
   exit 2
 }
 
@@ -158,17 +203,34 @@ case "${command}" in
       usage
     fi
     profile_file="${PROFILES_DIR}/$2.txt"
-    if [ ! -f "${profile_file}" ]; then
-      echo "No such profile: ${profile_file}" >&2
+    if [ -f "${profile_file}" ]; then
+      while IFS=: read -r control_name value; do
+        amixer -D equal set "${control_name}" "${value}%" > /dev/null
+      done < "${profile_file}"
+      echo "Loaded EQ profile ${profile_file}."
+    elif [ -n "${PRESETS[$2]+set}" ]; then
+      read -ra band_values <<< "${PRESETS[$2]}"
+      mapfile -t control_names < <(amixer -D equal scontrols | sed -e "s/.*'\(.*\)'.*/\1/")
+      if [ "${#control_names[@]}" -ne "${#band_values[@]}" ]; then
+        echo "Warning: preset has ${#band_values[@]} bands but this device exposes ${#control_names[@]}; applying what matches." >&2
+      fi
+      for i in "${!control_names[@]}"; do
+        [ "${i}" -lt "${#band_values[@]}" ] || break
+        amixer -D equal set "${control_names[${i}]}" "${band_values[${i}]}%" > /dev/null
+      done
+      echo "Loaded built-in preset '$2'."
+    else
+      echo "No such saved profile or built-in preset: $2" >&2
       exit 1
     fi
-    while IFS=: read -r control_name value; do
-      amixer -D equal set "${control_name}" "${value}%" > /dev/null
-    done < "${profile_file}"
-    echo "Loaded EQ profile ${profile_file}."
     ;;
   list)
     ls -1 "${PROFILES_DIR}" 2>/dev/null | sed 's/\.txt$//'
+    ;;
+  presets)
+    for name in "${!PRESETS[@]}"; do
+      echo "${name}"
+    done | sort
     ;;
   *)
     usage
@@ -182,6 +244,8 @@ chmod 0755 /usr/local/bin/mpd-eq
 # Print a message to indicate completion
 echo "ALSA equalizer configured. Update mpd.conf's local audio_output to"
 echo "use device \"equal\" instead of \"${SLAVE_DEVICE}\", then restart mpd."
-echo "Use 'sudo mpd-eq save <name>' / 'sudo mpd-eq load <name>' to manage profiles."
+echo "Use 'sudo mpd-eq save <name>' / 'sudo mpd-eq load <name>' to manage custom"
+echo "profiles, or 'sudo mpd-eq load <preset>' for a built-in preset (see"
+echo "'sudo mpd-eq presets' for the list)."
 
 exit 0
