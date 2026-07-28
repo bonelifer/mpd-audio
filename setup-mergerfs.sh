@@ -13,8 +13,9 @@
 # the process systemd tracks is the one actually serving the mount.
 #
 # Inputs:
-#   Edit SOURCE_DIRS and TARGET_DIR below before running.
-#   Must be run as root.
+#   None. Reads MERGERFS_SOURCE_DIRS and MERGERFS_TARGET_DIR from
+#   mpd-audio.conf (copy mpd-audio.conf.example to mpd-audio.conf and
+#   edit those two values first). Must be run as root.
 #
 # Outputs:
 #   Creates /etc/systemd/system/mergerfs-pool.service, enables and starts it.
@@ -27,9 +28,26 @@ if [ "${EUID}" -ne 0 ]; then
   exit 1
 fi
 
-# Define the source directories and the target directory
-SOURCE_DIRS=("/path/to/source1" "/path/to/source2" "/path/to/source3" "/path/to/source4") # Update before running
-TARGET_DIR="/path/to/merged" # Update before running
+# Load MERGERFS_SOURCE_DIRS and MERGERFS_TARGET_DIR from the shared config file
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="${SCRIPT_DIR}/mpd-audio.conf"
+if [ ! -f "${CONFIG_FILE}" ]; then
+  echo "${CONFIG_FILE} not found. Copy mpd-audio.conf.example to mpd-audio.conf and edit it, then re-run." >&2
+  exit 1
+fi
+# shellcheck source=/dev/null
+source "${CONFIG_FILE}"
+
+SOURCE_DIRS=("${MERGERFS_SOURCE_DIRS[@]}")
+TARGET_DIR="${MERGERFS_TARGET_DIR}"
+
+# Guard against running with the unedited placeholder paths from the
+# example config
+if [[ "${TARGET_DIR}" == /path/to/* ]]; then
+  echo "MERGERFS_TARGET_DIR in ${CONFIG_FILE} is still the placeholder value." >&2
+  echo "Edit it to a real path before running this script." >&2
+  exit 1
+fi
 
 # Install MergerFS if it's not already installed
 if ! command -v mergerfs &>/dev/null; then

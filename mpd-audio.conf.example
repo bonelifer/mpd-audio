@@ -1,0 +1,34 @@
+# mpd-audio shared configuration.
+#
+# Copy this file to mpd-audio.conf (same directory) and edit the values
+# for your system, then run the scripts. mpd-audio.conf is gitignored,
+# so local edits never conflict with a future update to the scripts
+# themselves.
+#
+# Only scripts that need one of these values source this file:
+# build-mpd.sh, setup-mergerfs.sh, generate-mpd-conf.sh, and
+# setup-log-rotation.sh.
+
+# --- build-mpd.sh ---
+MPD_VERSION="0.24.13"
+
+# --- setup-mergerfs.sh ---
+# Source directories to pool, and the mount point to pool them into.
+# These placeholder paths must be changed before running the script.
+MERGERFS_SOURCE_DIRS=("/path/to/source1" "/path/to/source2" "/path/to/source3" "/path/to/source4")
+MERGERFS_TARGET_DIR="/path/to/merged"
+
+# --- generate-mpd-conf.sh / setup-log-rotation.sh ---
+# MPD_LOG_FILE is used by both scripts - setup-log-rotation.sh rotates
+# whatever generate-mpd-conf.sh sets as log_file, so keep them in sync
+# by editing this one value rather than either script.
+MPD_MUSIC_DIRECTORY="/var/lib/mpd/music"
+MPD_LOG_FILE="/var/lib/mpd/log"
+MPD_STATE_FILE="/var/lib/mpd/state"
+MPD_STICKER_FILE="/var/lib/mpd/sticker.sql"
+MPD_PLAYLIST_DIRECTORY="/var/lib/mpd/playlists"
+MPD_DB_PATH="/var/lib/mpd/tag_cache"
+MPD_CACHE_DIRECTORY="/var/lib/mpd/cache"
+MPD_PORT="6600"
+MPD_SOCKET="/run/mpd/socket"
+MPD_HTTP_PORT="8000"

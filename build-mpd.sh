@@ -6,9 +6,10 @@
 # builds it with meson/ninja, and installs it system-wide.
 #
 # Inputs:
-#   None (edit MPD_VERSION below to change the target release).
-#   Must be run as root (uses sudo-equivalent privileges to install
-#   build dependencies and the compiled binaries).
+#   None. Reads MPD_VERSION from mpd-audio.conf (copy
+#   mpd-audio.conf.example to mpd-audio.conf first). Must be run as
+#   root (uses sudo-equivalent privileges to install build dependencies
+#   and the compiled binaries).
 #
 # Outputs:
 #   Installs MPD MPD_VERSION to the system (default meson prefix, e.g. /usr/local).
@@ -33,8 +34,15 @@ for cmd in wget tar meson ninja; do
   fi
 done
 
-# Define the MPD version you want to install
-MPD_VERSION="0.24.13" # Update to the desired version
+# Load MPD_VERSION from the shared config file
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="${SCRIPT_DIR}/mpd-audio.conf"
+if [ ! -f "${CONFIG_FILE}" ]; then
+  echo "${CONFIG_FILE} not found. Copy mpd-audio.conf.example to mpd-audio.conf and edit it, then re-run." >&2
+  exit 1
+fi
+# shellcheck source=/dev/null
+source "${CONFIG_FILE}"
 
 # Extract the major version (e.g., 0.24) from the full version
 MPD_MAJOR_VERSION="$(echo "${MPD_VERSION}" | cut -d'.' -f1,2)"

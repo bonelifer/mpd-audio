@@ -27,8 +27,8 @@
 # always_on "yes" unconditionally, so MPD keeps the device open between
 # tracks instead of reopening it each time - this avoids audible pops and,
 # for the Bluetooth output, re-establishing the A2DP stream on every song.
-# music_directory is set unconditionally to /var/lib/mpd/music (edit it if
-# your library lives elsewhere, e.g. a MergerFS pool from
+# music_directory comes from MPD_MUSIC_DIRECTORY in mpd-audio.conf (edit
+# it there if your library lives elsewhere, e.g. a MergerFS pool from
 # setup-mergerfs.sh), along with follow_outside_symlinks/
 # follow_inside_symlinks "yes" so a MergerFS pool built from symlinked
 # sources is scanned fully. zeroconf_enabled "yes" is also set
@@ -44,7 +44,10 @@
 # Inputs:
 #   None. Reads USB device list via lsusb, ALSA devices via aplay -L, and
 #   (if bluetoothctl is installed) paired Bluetooth devices via
-#   bluetoothctl.
+#   bluetoothctl. Paths and ports (music_directory, log_file, state_file,
+#   sticker_file, playlist_directory, database paths, MPD/HTTP ports) come
+#   from mpd-audio.conf - copy mpd-audio.conf.example to mpd-audio.conf
+#   and edit it first.
 #
 # Outputs:
 #   Writes ./mpd.conf in the current directory. Does not touch
@@ -59,6 +62,17 @@ for cmd in lsusb aplay; do
     exit 1
   fi
 done
+
+# Load MPD_MUSIC_DIRECTORY, MPD_LOG_FILE, and the other mpd.conf paths/ports
+# from the shared config file
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="${SCRIPT_DIR}/mpd-audio.conf"
+if [ ! -f "${CONFIG_FILE}" ]; then
+  echo "${CONFIG_FILE} not found. Copy mpd-audio.conf.example to mpd-audio.conf and edit it, then re-run." >&2
+  exit 1
+fi
+# shellcheck source=/dev/null
+source "${CONFIG_FILE}"
 
 # Ask once, up front, whether to use software mixing on ALSA outputs, so the
 # same answer applies uniformly to every local output (USB/PCH/Bluetooth)
@@ -229,7 +243,7 @@ fi
 mpd_zeroconf_name="MPD - $(hostname)"
 mpd_conf="# For network
 bind_to_address    \"any\"
-port               \"6600\"
+port               \"${MPD_PORT}\"
 
 # Advertise this MPD instance over mDNS/Avahi so zeroconf-aware clients can
 # auto-discover it on the LAN. Name includes the hostname to tell multiple
@@ -237,9 +251,10 @@ port               \"6600\"
 zeroconf_enabled   \"yes\"
 zeroconf_name      \"${mpd_zeroconf_name}\"
 
-# Root directory MPD scans for your music library. Edit if your library
-# lives elsewhere (e.g. a MergerFS pool from setup-mergerfs.sh).
-music_directory     \"/var/lib/mpd/music\"
+# Root directory MPD scans for your music library. Edit MPD_MUSIC_DIRECTORY
+# in mpd-audio.conf if your library lives elsewhere (e.g. a MergerFS pool
+# from setup-mergerfs.sh).
+music_directory     \"${MPD_MUSIC_DIRECTORY}\"
 
 # Follow symlinks in music_directory, in and out of it, so a MergerFS pool
 # built from symlinked source directories (setup-mergerfs.sh) is scanned
@@ -249,16 +264,16 @@ follow_inside_symlinks  \"yes\"
 
 # Log destination. Explicit (rather than relying on journald) so
 # setup-log-rotation.sh has a file to rotate.
-log_file            \"/var/lib/mpd/log\"
+log_file            \"${MPD_LOG_FILE}\"
 
 # Persist playback state (queue, song position, volume) across restarts
-state_file          \"/var/lib/mpd/state\"
+state_file          \"${MPD_STATE_FILE}\"
 
 # Enable stickers - myMPD uses stickers for play statistics
-sticker_file        \"/var/lib/mpd/sticker.sql\"
+sticker_file        \"${MPD_STICKER_FILE}\"
 
 # Enable stored playlists, also needed for myMPD smart playlists
-playlist_directory  \"/var/lib/mpd/playlists\"
+playlist_directory  \"${MPD_PLAYLIST_DIRECTORY}\"
 
 # Enable metadata. If set to none, you can only browse the filesystem
 metadata_to_use     \"AlbumArtist,Artist,Album,Title,Track,Disc,Genre,Name\"
@@ -274,13 +289,13 @@ auto_update          \"yes\"
 
 # bind mpd to a unix socket
 # Only socket connection to mpd enables some myMPD auto configuration features
-bind_to_address     \"/run/mpd/socket\"
+bind_to_address     \"${MPD_SOCKET}\"
 
 # Mounting is only possible with the simple database plugin and a cache_directory
 database {
     plugin          \"simple\"
-    path            \"/var/lib/mpd/tag_cache\"
-    cache_directory \"/var/lib/mpd/cache\"
+    path            \"${MPD_DB_PATH}\"
+    cache_directory \"${MPD_CACHE_DIRECTORY}\"
 }
 
 # Enable neighbor plugins
@@ -296,7 +311,7 @@ audio_output {
     type        \"httpd\"
     name        \"HTTP Stream\"
     encoder     \"lame\" #to support safari on ios
-    port        \"8000\"
+    port        \"${MPD_HTTP_PORT}\"
     bitrate     \"128\"
     format      \"44100:16:1\"
     always_on   \"yes\"

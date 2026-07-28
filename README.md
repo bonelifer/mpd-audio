@@ -8,6 +8,24 @@ Run everything interactively via `menu.sh`, or run individual scripts
 directly. Most scripts must be run as root (`sudo ./script.sh`); each checks
 for this itself and exits with an error if not.
 
+## Configuration
+
+`build-mpd.sh`, `setup-mergerfs.sh`, `generate-mpd-conf.sh`, and
+`setup-log-rotation.sh` read shared settings (MPD version, MergerFS
+source/target directories, and `mpd.conf` paths/ports) from
+`mpd-audio.conf` instead of hardcoded values. Copy the template and edit
+it before running any of them:
+
+```bash
+cp mpd-audio.conf.example mpd-audio.conf
+$EDITOR mpd-audio.conf
+```
+
+`mpd-audio.conf` is gitignored, so local edits won't conflict with a
+future update to the scripts. `MERGERFS_SOURCE_DIRS`/`MERGERFS_TARGET_DIR`
+must be changed from their placeholder values; everything else has a
+working default.
+
 ## Quick start
 
 ```bash
@@ -30,13 +48,15 @@ you to the menu so you can retry or move on.
    the `mkdc` helper function to their `~/.bashrc`, then installs `mpc`
    and Docker (via `install-docker.sh`). Other scripts assume these are
    present.
-4. **`setup-mergerfs.sh`** — *edit `SOURCE_DIRS` and `TARGET_DIR` at the top
-   of the script first.* Installs MergerFS and registers a
-   `mergerfs-pool.service` systemd unit that pools multiple source
-   directories into one mount point (e.g. for a merged music library).
-5. **`build-mpd.sh`** — compiles and installs MPD from source (default
-   version `0.24.13`, edit `MPD_VERSION` to change it) with a broad set of
-   input/output/decoder plugins enabled.
+4. **`setup-mergerfs.sh`** — reads `MERGERFS_SOURCE_DIRS`/`MERGERFS_TARGET_DIR`
+   from `mpd-audio.conf` (see Configuration above; refuses to run if
+   they're still the placeholder values). Installs MergerFS and
+   registers a `mergerfs-pool.service` systemd unit that pools multiple
+   source directories into one mount point (e.g. for a merged music
+   library).
+5. **`build-mpd.sh`** — compiles and installs MPD from source (version
+   from `MPD_VERSION` in `mpd-audio.conf`, default `0.24.13`) with a
+   broad set of input/output/decoder plugins enabled.
 6. **`setup-bluetooth-audio.sh [MAC_ADDRESS]`** *(optional)* — pairs a
    Bluetooth A2DP speaker/receiver and installs BlueALSA so it can be
    added as a local `audio_output` in `mpd.conf`, alongside or instead of
@@ -56,12 +76,13 @@ you to the menu so you can retry or move on.
    template `./mpd.conf` (network binding, socket, zeroconf/mDNS
    advertisement, log file, state persistence, auto-update on library
    changes, stickers, playlists, ReplayGain, symlink-following for
-   MergerFS pools, HTTP stream output, and local ALSA output(s)). Prompts
-   once whether to enable software mixing (`mixer_type "software"`)
-   across all local ALSA outputs for a consistent volume curve, and, per
-   Bluetooth device found, whether to include it. Each prompt times out
-   (defaulting to No) if left unanswered. Does not need root. Review the
-   generated file, then copy it to `/etc/mpd.conf` yourself.
+   MergerFS pools, HTTP stream output, and local ALSA output(s)) using
+   the paths/ports from `mpd-audio.conf`. Prompts once whether to enable
+   software mixing (`mixer_type "software"`) across all local ALSA
+   outputs for a consistent volume curve, and, per Bluetooth device
+   found, whether to include it. Each prompt times out (defaulting to
+   No) if left unanswered. Does not need root. Review the generated
+   file, then copy it to `/etc/mpd.conf` yourself.
 8. **`install-mympd.sh`** — clones, builds, and installs myMPD (web UI for
    MPD) from source, and registers it as the `mympd` systemd service.
 9. **`install-mpdris2.sh`** — run *after* `mpd.conf` is generated and
@@ -70,7 +91,8 @@ you to the menu so you can retry or move on.
    `music_directory` read from `/etc/mpd.conf`.
 10. **`setup-log-rotation.sh`** — run *after* `mpd.conf` is installed to
     `/etc/mpd.conf`, since that's what sets `log_file`. Installs a
-    `logrotate` policy for `/var/lib/mpd/log`.
+    `logrotate` policy for `MPD_LOG_FILE` (from `mpd-audio.conf`, the
+    same value `generate-mpd-conf.sh` used).
 11. **`install-mpd2chromecast.sh`** *(optional)* — clones, installs, and
     runs [mpd2chromecast](https://github.com/dresdner353/mpd2chromecast)
     as a systemd service, relaying MPD playback to Chromecast/Google Home
@@ -146,8 +168,10 @@ you to the menu so you can retry or move on.
   (e.g. via `setup-bluetooth-audio.sh` or manually with `bluetoothctl`)
   that advertise the A2DP "Audio Sink" service — it doesn't pair new
   devices itself.
-- Edit the placeholder values in `setup-mergerfs.sh` (`SOURCE_DIRS`,
-  `TARGET_DIR`) and `build-mpd.sh` (`MPD_VERSION`) before running them.
+- Edit `mpd-audio.conf` (see Configuration above) before running
+  `setup-mergerfs.sh`, `build-mpd.sh`, `generate-mpd-conf.sh`, or
+  `setup-log-rotation.sh` — all four read their settings from there
+  instead of hardcoded values in the scripts.
 - `setup-bluetooth-audio.sh` only edits `mpd.conf` if `/etc/mpd.conf`
   already exists (backing it up first, like `setup-alsa-equalizer.sh`);
   otherwise it prints the `audio_output {}` block instead, since there's
