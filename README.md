@@ -115,10 +115,10 @@ you to the menu so you can retry or move on.
    before.
 8. **`install-mympd.sh`** — clones, builds, and installs myMPD (web UI for
    MPD) from source, and registers it as the `mympd` systemd service.
-9. **`install-mpdris2.sh`** — run *after* `mpd.conf` is generated and
-   installed. Builds and installs mpDris2 from source and writes
-   `~/.config/mpDris2/mpDris2.conf` for the invoking user, using the
-   `music_directory` read from `/etc/mpd.conf`.
+9. **`install-mpdris2.sh`** *(optional)* — run *after* `mpd.conf` is
+   generated and installed. Builds and installs mpDris2 from source and
+   writes `~/.config/mpDris2/mpDris2.conf` for the invoking user, using
+   the `music_directory` read from `/etc/mpd.conf`.
 10. **`setup-log-rotation.sh`** — run *after* `mpd.conf` is installed to
     `/etc/mpd.conf`, since that's what sets `log_file`. Installs a
     `logrotate` policy for `MPD_LOG_FILE` (from `mpd-audio.conf`, the
