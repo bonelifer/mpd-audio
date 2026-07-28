@@ -4,6 +4,16 @@
 # the built-in analog (PCH) output, and paired Bluetooth A2DP speakers, and
 # generate a template mpd.conf.
 #
+# IMPORTANT - run order: pair Bluetooth devices with
+# setup-bluetooth-audio.sh BEFORE running this script - it only offers
+# devices that are already paired. Run setup-alsa-equalizer.sh AFTER
+# this script, not before - it reads /etc/mpd.conf to find what to wrap.
+# Once /etc/mpd.conf exists, both of those scripts edit it directly; if
+# you re-run this script later (e.g. to add a new USB device) and accept
+# its offer to copy the result into /etc/mpd.conf, that overwrites
+# whatever they added. It's backed up first, but you'd need to re-run
+# them again afterward to restore those output blocks.
+#
 # Combines the previous audio.sh (USB device scan) and gen-mpd-conf.sh
 # (mpd.conf generation) into one pass, so the USB scan only runs once and
 # no longer round-trips through an intermediate usb-audio.txt file.
@@ -50,9 +60,10 @@
 #   and edit it first.
 #
 # Outputs:
-#   Writes ./mpd.conf in the current directory. Does not touch
-#   /etc/mpd.conf - review the generated file, then copy it into place
-#   manually.
+#   Writes ./mpd.conf in the current directory. Then prompts (30 second
+#   timeout, defaults to No) whether to copy it to /etc/mpd.conf; if
+#   declined (or the file already exists and you decline), review it and
+#   copy it into place yourself.
 
 set -euo pipefail
 

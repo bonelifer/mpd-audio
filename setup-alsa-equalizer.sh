@@ -6,6 +6,14 @@
 # as plain text, with the same built-in presets as the alsaequal-web-api
 # project's browser/HTTP front-end.
 #
+# IMPORTANT - run order: run this AFTER generate-mpd-conf.sh (or after
+# /etc/mpd.conf otherwise exists), not before - with no argument, it
+# reads /etc/mpd.conf to find which outputs to wrap. This script edits
+# /etc/mpd.conf directly; don't re-run generate-mpd-conf.sh afterward
+# and accept its offer to copy a fresh ./mpd.conf into place, or you'll
+# overwrite the wrapped devices this script just set up (it's backed
+# up, but you'd have to re-run this script again to restore it).
+#
 # libasound2-plugin-equal stores its band gains in an opaque binary file
 # (default ~/.alsaequal.bin) that you can only edit through an ALSA mixer
 # (alsamixer/amixer) - there's no way to hand-author a text EQ curve for

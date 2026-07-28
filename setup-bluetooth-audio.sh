@@ -3,6 +3,15 @@
 # setup-bluetooth-audio.sh - Pair a Bluetooth A2DP speaker/receiver and
 # expose it as an ALSA output via BlueALSA, for use as an MPD audio_output.
 #
+# IMPORTANT - run order: run this BEFORE generate-mpd-conf.sh on first
+# setup - that script only offers Bluetooth devices that are already
+# paired. If you're pairing an additional device later, after
+# /etc/mpd.conf already exists, this script edits it directly; don't
+# re-run generate-mpd-conf.sh afterward and accept its offer to copy a
+# fresh ./mpd.conf into place, or you'll overwrite what this script
+# just added (it's backed up, but you'd have to re-run this script
+# again to restore it).
+#
 # Uses BlueALSA (the "bluealsa" package) rather than PulseAudio/PipeWire,
 # so the resulting device can be dropped straight into an
 # `audio_output { type "alsa" ... }` block, matching the USB/PCH outputs

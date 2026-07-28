@@ -46,6 +46,19 @@ you to the menu so you can retry or move on.
 
 ## Recommended order
 
+> **Order matters for steps 6, 7, and 12** (`setup-bluetooth-audio.sh`,
+> `generate-mpd-conf.sh`, `setup-alsa-equalizer.sh`). Pair Bluetooth
+> devices *before* generating `mpd.conf` — `generate-mpd-conf.sh` only
+> offers Bluetooth devices that are already paired. Wrap outputs with
+> the ALSA EQ *after* generating `mpd.conf` — `setup-alsa-equalizer.sh`
+> reads `/etc/mpd.conf` to find what to wrap. Once `/etc/mpd.conf`
+> exists, both `setup-bluetooth-audio.sh` and `setup-alsa-equalizer.sh`
+> edit it directly; if you re-run `generate-mpd-conf.sh` again later
+> (e.g. to add a new USB device) and accept its offer to copy the result
+> into `/etc/mpd.conf`, that **overwrites** whatever those two scripts
+> added — it backs up the file first, but you'd need to re-run them
+> again afterward to restore Bluetooth/EQ output blocks.
+
 1. **`setup-unattended-upgrades.sh`** — installs and configures
    `unattended-upgrades` for automatic security updates.
 2. **`grant-passwordless-sudo.sh`** — adds the invoking user to the `sudo`
