@@ -38,20 +38,29 @@ you to the menu so you can retry or move on.
    version `0.24.13`, edit `MPD_VERSION` to change it) with a broad set of
    input/output/decoder plugins enabled.
 6. **`generate-mpd-conf.sh`** — detects Creative/Sound Blaster USB audio
-   devices and the built-in analog (PCH) output, and writes a template
-   `./mpd.conf` (network binding, socket, log file, state persistence,
-   auto-update on library changes, stickers, playlists, ReplayGain, HTTP
-   stream output, and a local ALSA output). Does not need root. Review the
-   generated file, then copy it to `/etc/mpd.conf` yourself.
+   devices, the built-in analog (PCH) output, and already-paired Bluetooth
+   A2DP speakers (via `bluetoothctl`, skipped with a note if it isn't
+   installed), and writes a template `./mpd.conf` (network binding,
+   socket, zeroconf/mDNS advertisement, log file, state persistence,
+   auto-update on library changes, stickers, playlists, ReplayGain,
+   symlink-following for MergerFS pools, HTTP stream output, and local
+   ALSA output(s)). Prompts once whether to enable software mixing
+   (`mixer_type "software"`) across all local ALSA outputs for a
+   consistent volume curve, and, per Bluetooth device found, whether to
+   include it. Each prompt times out (defaulting to No) if left
+   unanswered. Does not need root. Review the generated file, then copy
+   it to `/etc/mpd.conf` yourself.
 7. **`install-mympd.sh`** — clones, builds, and installs myMPD (web UI for
    MPD) from source, and registers it as the `mympd` systemd service.
 8. **`install-mpdris2.sh`** — run *after* `mpd.conf` is generated and
    installed. Builds and installs mpDris2 from source and writes
    `~/.config/mpDris2/mpDris2.conf` for the invoking user, using the
    `music_directory` read from `/etc/mpd.conf`.
-9. **`setup-bluetooth-audio.sh`** *(optional)* — pairs a Bluetooth A2DP
-   speaker/receiver and installs BlueALSA so it can be added as a local
-   `audio_output` in `mpd.conf`, alongside or instead of USB/PCH.
+9. **`setup-bluetooth-audio.sh [MAC_ADDRESS]`** *(optional)* — pairs a
+   Bluetooth A2DP speaker/receiver and installs BlueALSA so it can be
+   added as a local `audio_output` in `mpd.conf`, alongside or instead of
+   USB/PCH. If `MAC_ADDRESS` is omitted, it scans for nearby devices (15
+   seconds) and prompts for one (15 second timeout).
 10. **`setup-log-rotation.sh`** — run *after* `mpd.conf` is installed to
     `/etc/mpd.conf`, since that's what sets `log_file`. Installs a
     `logrotate` policy for `/var/lib/mpd/log`.
@@ -60,11 +69,14 @@ you to the menu so you can retry or move on.
     as a systemd service, relaying MPD playback to Chromecast/Google Home
     devices on the LAN. Its "Cast MPD Output Stream" mode uses the
     `httpd` output already in `mpd.conf`.
-12. **`setup-alsa-equalizer.sh`** *(optional)* — wraps a chosen output
-    device (USB/PCH/BlueALSA) with a 10-band ALSA equalizer
+12. **`setup-alsa-equalizer.sh [SLAVE_DEVICE]`** *(optional)* — wraps a
+    chosen output device (USB/PCH/BlueALSA) with a 10-band ALSA equalizer
     (`libasound2-plugin-equal`) named `equal`, and installs an `mpd-eq`
-    helper for saving/loading named EQ profiles as plain text. Point
-    `mpd.conf`'s local `audio_output` at `device "equal"` afterward.
+    helper for saving/loading named EQ profiles as plain text. If
+    `SLAVE_DEVICE` is omitted, it lists ALSA devices (`aplay -L`) and
+    prompts for one (30 second timeout, no default — aborts if left
+    unanswered). Point `mpd.conf`'s local `audio_output` at `device
+    "equal"` afterward.
 13. **`install-gpodder-cli.sh [DOWNLOAD_DIR]`** *(optional)* — installs
     `gpo`, the text-mode CLI for [gPodder](https://gpodder.org/), plus
     operation helper scripts (`gpo-login`, `gpo-update`, `gpo-download`,
@@ -105,6 +117,10 @@ you to the menu so you can retry or move on.
   pulls the latest upstream changes and rebuilds.
 - `generate-mpd-conf.sh` never touches `/etc/mpd.conf` directly — it only
   writes to the current directory so you can review the result first.
+- `generate-mpd-conf.sh` only offers Bluetooth devices already paired
+  (e.g. via `setup-bluetooth-audio.sh` or manually with `bluetoothctl`)
+  that advertise the A2DP "Audio Sink" service — it doesn't pair new
+  devices itself.
 - Edit the placeholder values in `setup-mergerfs.sh` (`SOURCE_DIRS`,
   `TARGET_DIR`) and `build-mpd.sh` (`MPD_VERSION`) before running them.
 - `setup-bluetooth-audio.sh` never touches `mpd.conf` either — it prints the

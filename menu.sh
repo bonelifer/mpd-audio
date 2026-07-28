@@ -8,15 +8,15 @@
 
 set -uo pipefail
 
-# Define the script file paths
+# Define the script file paths, in the README's recommended run order
 UNATTENDED_SCRIPT="./setup-unattended-upgrades.sh"
-MPD_COMPILE_SCRIPT="./build-mpd.sh"
-INSTALL_MPDRIS2_SCRIPT="./install-mpdris2.sh"
-INSTALL_MYMPD_SCRIPT="./install-mympd.sh"
-MERGERFS_SCRIPT="./setup-mergerfs.sh"
-GEN_MPD_CONF_SCRIPT="./generate-mpd-conf.sh"
 SUDOER_SCRIPT="./grant-passwordless-sudo.sh"
 INSTALL_APPS_SCRIPT="./install-apps.sh"
+MERGERFS_SCRIPT="./setup-mergerfs.sh"
+MPD_COMPILE_SCRIPT="./build-mpd.sh"
+GEN_MPD_CONF_SCRIPT="./generate-mpd-conf.sh"
+INSTALL_MYMPD_SCRIPT="./install-mympd.sh"
+INSTALL_MPDRIS2_SCRIPT="./install-mpdris2.sh"
 BLUETOOTH_SCRIPT="./setup-bluetooth-audio.sh"
 LOG_ROTATION_SCRIPT="./setup-log-rotation.sh"
 MPD2CHROMECAST_SCRIPT="./install-mpd2chromecast.sh"
@@ -28,13 +28,13 @@ while true; do
     clear
     echo "Select an option:"
     echo "1. Run setup-unattended-upgrades.sh"
-    echo "2. Run build-mpd.sh"
-    echo "3. Run install-mpdris2.sh"
-    echo "4. Run install-mympd.sh"
-    echo "5. Run setup-mergerfs.sh"
+    echo "2. Run grant-passwordless-sudo.sh"
+    echo "3. Run install-apps.sh"
+    echo "4. Run setup-mergerfs.sh"
+    echo "5. Run build-mpd.sh"
     echo "6. Run generate-mpd-conf.sh"
-    echo "7. Run grant-passwordless-sudo.sh"
-    echo "8. Run install-apps.sh"
+    echo "7. Run install-mympd.sh"
+    echo "8. Run install-mpdris2.sh"
     echo "9. Run setup-bluetooth-audio.sh"
     echo "10. Run setup-log-rotation.sh"
     echo "11. Run install-mpd2chromecast.sh"
@@ -51,19 +51,19 @@ while true; do
             read -r -p "Press Enter to continue..."
             ;;
         2)
-            sudo "${MPD_COMPILE_SCRIPT}"
+            sudo "${SUDOER_SCRIPT}"
             read -r -p "Press Enter to continue..."
             ;;
         3)
-            sudo "${INSTALL_MPDRIS2_SCRIPT}"
+            sudo "${INSTALL_APPS_SCRIPT}"
             read -r -p "Press Enter to continue..."
             ;;
         4)
-            sudo "${INSTALL_MYMPD_SCRIPT}"
+            sudo "${MERGERFS_SCRIPT}"
             read -r -p "Press Enter to continue..."
             ;;
         5)
-            sudo "${MERGERFS_SCRIPT}"
+            sudo "${MPD_COMPILE_SCRIPT}"
             read -r -p "Press Enter to continue..."
             ;;
         6)
@@ -72,11 +72,11 @@ while true; do
             read -r -p "Press Enter to continue..."
             ;;
         7)
-            sudo "${SUDOER_SCRIPT}"
+            sudo "${INSTALL_MYMPD_SCRIPT}"
             read -r -p "Press Enter to continue..."
             ;;
         8)
-            sudo "${INSTALL_APPS_SCRIPT}"
+            sudo "${INSTALL_MPDRIS2_SCRIPT}"
             read -r -p "Press Enter to continue..."
             ;;
         9)
