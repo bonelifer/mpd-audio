@@ -34,8 +34,17 @@
 # Usage:
 #   sudo ./setup-alsa-equalizer.sh [SLAVE_DEVICE]
 #
-#   If SLAVE_DEVICE is omitted, the script lists ALSA devices (aplay -L)
-#   and prompts for one (30 second timeout, no default).
+#   If SLAVE_DEVICE is given, only that one device is wrapped (as
+#   "equal"), same as before - /etc/mpd.conf is left untouched and you
+#   update it yourself.
+#
+#   If SLAVE_DEVICE is omitted, the script instead reads every local
+#   "alsa" audio_output already in /etc/mpd.conf (as written by
+#   generate-mpd-conf.sh), wraps each one with its own "equal_<name>"
+#   PCM sharing one EQ control surface, and rewrites each block's
+#   `device` line in /etc/mpd.conf to point at its new wrapped PCM
+#   (backing up /etc/mpd.conf first). Devices already wrapped (a prior
+#   run) are skipped.
 #
 # Inputs:
 #   $1 (optional) - ALSA device to wrap, e.g. "hw:CARD=PCH,DEV=0" or a
@@ -44,10 +53,12 @@
 #
 # Outputs:
 #   Installs alsa-utils and libasound2-plugin-equal. Backs up any
-#   existing /etc/asound.conf, then writes a new one defining the "equal"
-#   ctl/pcm. Creates /var/lib/mpd/alsaequal (profiles dir + controls
-#   file), owned by mpd:mpd. Installs /usr/local/bin/mpd-eq
-#   (save|load|list|presets).
+#   existing /etc/asound.conf, then writes a new one defining a shared
+#   "equal" ctl plus one "equal_<name>" pcm per wrapped device (or a
+#   single "equal" pcm, if SLAVE_DEVICE was given explicitly). Creates
+#   /var/lib/mpd/alsaequal (profiles dir + controls file), owned by
+#   mpd:mpd. Installs /usr/local/bin/mpd-eq (save|load|list|presets). In
+#   auto-detect mode, also backs up and rewrites /etc/mpd.conf.
 
 set -euo pipefail
 
@@ -61,26 +72,84 @@ EQUAL_DIR="/var/lib/mpd/alsaequal"
 CONTROLS_FILE="${EQUAL_DIR}/current.bin"
 PROFILES_DIR="${EQUAL_DIR}/profiles"
 ASOUND_CONF="/etc/asound.conf"
+MPD_CONF="/etc/mpd.conf"
 
 SLAVE_DEVICE="${1:-}"
+AUTO_DETECT=0
+declare -a DETECTED_NAMES=()
+declare -a DETECTED_DEVICES=()
+declare -a DETECTED_PCM_NAMES=()
 
-# If no device was given, list ALSA devices and prompt for one
 if [ -z "${SLAVE_DEVICE}" ]; then
-  if ! command -v aplay &>/dev/null; then
-    echo "Required command 'aplay' not found. Install it and re-run." >&2
+  AUTO_DETECT=1
+
+  if [ ! -f "${MPD_CONF}" ]; then
+    echo "${MPD_CONF} not found, so there's nothing to auto-detect." >&2
+    echo "Run generate-mpd-conf.sh and copy the result to ${MPD_CONF} first," >&2
+    echo "or pass a device to wrap explicitly, e.g.:" >&2
+    echo "  sudo $0 hw:CARD=PCH,DEV=0" >&2
     exit 1
   fi
-  echo "Available ALSA devices:"
-  aplay -L
-  if ! read -t 30 -r -p "Enter the device to wrap with the equalizer [30s timeout]: " SLAVE_DEVICE; then
-    echo
-    echo "No response within 30 seconds; aborting." >&2
-    exit 1
+
+  # Parse each `audio_output { ... }` block in mpd.conf, keeping only
+  # local "alsa" outputs with a device not already wrapped by a
+  # previous run of this script.
+  in_block=0
+  block_type=""
+  block_name=""
+  block_device=""
+  while IFS= read -r line; do
+    if [[ "${line}" =~ ^[[:space:]]*audio_output[[:space:]]*\{ ]]; then
+      in_block=1
+      block_type=""
+      block_name=""
+      block_device=""
+      continue
+    fi
+    if [ "${in_block}" -eq 1 ] && [[ "${line}" =~ ^[[:space:]]*\} ]]; then
+      if [ "${block_type}" = "alsa" ] && [ -n "${block_device}" ] && [[ "${block_device}" != equal* ]]; then
+        DETECTED_NAMES+=("${block_name}")
+        DETECTED_DEVICES+=("${block_device}")
+      fi
+      in_block=0
+      continue
+    fi
+    if [ "${in_block}" -eq 1 ]; then
+      if [[ "${line}" =~ ^[[:space:]]*type[[:space:]]+\"([^\"]*)\" ]]; then
+        block_type="${BASH_REMATCH[1]}"
+      elif [[ "${line}" =~ ^[[:space:]]*name[[:space:]]+\"([^\"]*)\" ]]; then
+        block_name="${BASH_REMATCH[1]}"
+      elif [[ "${line}" =~ ^[[:space:]]*device[[:space:]]+\"([^\"]*)\" ]]; then
+        block_device="${BASH_REMATCH[1]}"
+      fi
+    fi
+  done < "${MPD_CONF}"
+
+  if [ "${#DETECTED_DEVICES[@]}" -eq 0 ]; then
+    echo "No wrappable local ALSA audio_output found in ${MPD_CONF}" >&2
+    echo "(none configured, or all already wrapped with \"equal_*\"). Nothing to do." >&2
+    exit 0
   fi
-  if [ -z "${SLAVE_DEVICE}" ]; then
-    echo "No device entered; aborting." >&2
-    exit 1
-  fi
+
+  # Turn each output's name into a unique "equal_<slug>" PCM name,
+  # de-duplicating in the unlikely case two names collide once slugged.
+  declare -A SEEN_SLUGS=()
+  for name in "${DETECTED_NAMES[@]}"; do
+    slug="$(echo "${name}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/_/g; s/^_+//; s/_+$//')"
+    pcm_name="equal_${slug}"
+    if [ -n "${SEEN_SLUGS[${pcm_name}]+set}" ]; then
+      SEEN_SLUGS[${pcm_name}]=$((SEEN_SLUGS[${pcm_name}] + 1))
+      pcm_name="${pcm_name}_${SEEN_SLUGS[${pcm_name}]}"
+    else
+      SEEN_SLUGS[${pcm_name}]=1
+    fi
+    DETECTED_PCM_NAMES+=("${pcm_name}")
+  done
+
+  echo "Detected local ALSA outputs in ${MPD_CONF}:"
+  for i in "${!DETECTED_NAMES[@]}"; do
+    echo "  - ${DETECTED_NAMES[${i}]} (${DETECTED_DEVICES[${i}]}) -> ${DETECTED_PCM_NAMES[${i}]}"
+  done
 fi
 
 # Install alsa-utils (amixer/aplay) and the alsaequal plugin
@@ -99,22 +168,52 @@ if [ -f "${ASOUND_CONF}" ]; then
   echo "Backed up existing ${ASOUND_CONF} to ${BACKUP_FILE}."
 fi
 
-# Write the "equal" ctl/pcm definition. slave.pcm is wrapped with
-# "plug:" since alsaequal only supports floating point samples and a raw
-# hw device won't do the conversion.
-cat <<EOF > "${ASOUND_CONF}"
-ctl.equal {
-    type equal;
-    controls "${CONTROLS_FILE}";
-}
+# Write the "equal" ctl definition, plus one pcm per wrapped device (all
+# sharing the same ctl/controls file, so one EQ curve applies to every
+# wrapped output at once). slave.pcm is wrapped with "plug:" since
+# alsaequal only supports floating point samples and a raw hw device
+# won't do the conversion.
+{
+  echo "ctl.equal {"
+  echo "    type equal;"
+  echo "    controls \"${CONTROLS_FILE}\";"
+  echo "}"
+  echo
 
-pcm.equal {
-    type equal;
-    slave.pcm "plug:${SLAVE_DEVICE}";
-    controls "${CONTROLS_FILE}";
-}
-EOF
-echo "Wrote ${ASOUND_CONF} wrapping ${SLAVE_DEVICE} as ALSA device \"equal\"."
+  if [ "${AUTO_DETECT}" -eq 1 ]; then
+    for i in "${!DETECTED_DEVICES[@]}"; do
+      echo "pcm.${DETECTED_PCM_NAMES[${i}]} {"
+      echo "    type equal;"
+      echo "    slave.pcm \"plug:${DETECTED_DEVICES[${i}]}\";"
+      echo "    controls \"${CONTROLS_FILE}\";"
+      echo "}"
+      echo
+    done
+  else
+    echo "pcm.equal {"
+    echo "    type equal;"
+    echo "    slave.pcm \"plug:${SLAVE_DEVICE}\";"
+    echo "    controls \"${CONTROLS_FILE}\";"
+    echo "}"
+  fi
+} > "${ASOUND_CONF}"
+
+if [ "${AUTO_DETECT}" -eq 1 ]; then
+  echo "Wrote ${ASOUND_CONF} wrapping ${#DETECTED_DEVICES[@]} device(s)."
+
+  # Back up /etc/mpd.conf before rewriting its device lines, same as
+  # /etc/asound.conf above.
+  MPD_CONF_BACKUP="${MPD_CONF}.bak.$(date +%Y%m%d%H%M%S)"
+  cp "${MPD_CONF}" "${MPD_CONF_BACKUP}"
+  echo "Backed up existing ${MPD_CONF} to ${MPD_CONF_BACKUP}."
+
+  for i in "${!DETECTED_DEVICES[@]}"; do
+    sed -i "s#device[[:space:]]*\"${DETECTED_DEVICES[${i}]}\"#device \"${DETECTED_PCM_NAMES[${i}]}\"#" "${MPD_CONF}"
+  done
+  echo "Updated ${MPD_CONF}'s audio_output device lines to point at the wrapped PCMs."
+else
+  echo "Wrote ${ASOUND_CONF} wrapping ${SLAVE_DEVICE} as ALSA device \"equal\"."
+fi
 
 # Install the mpd-eq helper for saving/loading named EQ profiles
 cat <<'EOF' > /usr/local/bin/mpd-eq
@@ -242,8 +341,14 @@ EOF
 chmod 0755 /usr/local/bin/mpd-eq
 
 # Print a message to indicate completion
-echo "ALSA equalizer configured. Update mpd.conf's local audio_output to"
-echo "use device \"equal\" instead of \"${SLAVE_DEVICE}\", then restart mpd."
+if [ "${AUTO_DETECT}" -eq 1 ]; then
+  echo "ALSA equalizer configured for ${#DETECTED_DEVICES[@]} device(s), and"
+  echo "${MPD_CONF} already updated to match. Restart mpd to pick it up:"
+  echo "  sudo systemctl restart mpd"
+else
+  echo "ALSA equalizer configured. Update mpd.conf's local audio_output to"
+  echo "use device \"equal\" instead of \"${SLAVE_DEVICE}\", then restart mpd."
+fi
 echo "Use 'sudo mpd-eq save <name>' / 'sudo mpd-eq load <name>' to manage custom"
 echo "profiles, or 'sudo mpd-eq load <preset>' for a built-in preset (see"
 echo "'sudo mpd-eq presets' for the list)."

@@ -71,16 +71,22 @@ you to the menu so you can retry or move on.
     as a systemd service, relaying MPD playback to Chromecast/Google Home
     devices on the LAN. Its "Cast MPD Output Stream" mode uses the
     `httpd` output already in `mpd.conf`.
-12. **`setup-alsa-equalizer.sh [SLAVE_DEVICE]`** *(optional)* — wraps a
-    chosen output device (USB/PCH/BlueALSA) with a 10-band ALSA equalizer
-    (`libasound2-plugin-equal`) named `equal`, and installs an `mpd-eq`
-    helper for saving/loading named EQ profiles as plain text, plus
-    built-in presets (`mpd-eq load rock`, `mpd-eq presets` to list them
-    all) matching [alsaequal-web-api](https://github.com/bonelifer/alsaequal-web-api)'s
-    browser/HTTP presets exactly. If `SLAVE_DEVICE` is omitted, it lists
-    ALSA devices (`aplay -L`) and prompts for one (30 second timeout, no
-    default — aborts if left unanswered). Point `mpd.conf`'s local
-    `audio_output` at `device "equal"` afterward.
+12. **`setup-alsa-equalizer.sh [SLAVE_DEVICE]`** *(optional)* — run
+    *after* `mpd.conf` is installed to `/etc/mpd.conf`. Wraps output
+    device(s) with a 10-band ALSA equalizer (`libasound2-plugin-equal`),
+    and installs an `mpd-eq` helper for saving/loading named EQ profiles
+    as plain text, plus built-in presets (`mpd-eq load rock`, `mpd-eq
+    presets` to list them all) matching
+    [alsaequal-web-api](https://github.com/bonelifer/alsaequal-web-api)'s
+    browser/HTTP presets exactly. With no argument, it reads every local
+    `alsa` `audio_output` already in `/etc/mpd.conf` (PCH/USB/BlueALSA -
+    whichever `generate-mpd-conf.sh` configured), wraps *all* of them
+    (sharing one EQ so `mpd-eq`/`eqctl` control every output at once),
+    and rewrites each block's `device` in `/etc/mpd.conf` to point at its
+    new wrapped PCM (backing up `/etc/mpd.conf` first; already-wrapped
+    devices are skipped, so it's safe to re-run). Passing `SLAVE_DEVICE`
+    explicitly wraps only that one device as plain `equal`, and leaves
+    `mpd.conf` for you to update yourself, same as before.
 13. **`install-alsaequal-web-api.sh`** *(optional)* — run *after*
     `setup-alsa-equalizer.sh`. Clones (or updates)
     [alsaequal-web-api](https://github.com/bonelifer/alsaequal-web-api)
@@ -117,7 +123,7 @@ you to the menu so you can retry or move on.
 | `install-mpdris2.sh` | yes (via sudo) | Build/install mpDris2 and write its per-user config. |
 | `setup-log-rotation.sh` | yes | Install a `logrotate` policy for MPD's log file. |
 | `install-mpd2chromecast.sh` | yes (via sudo) | Install mpd2chromecast and register it as a systemd service for Chromecast/Google Home playback. |
-| `setup-alsa-equalizer.sh` | yes | Wrap an output device with a 10-band ALSA EQ and install the `mpd-eq` save/load helper. |
+| `setup-alsa-equalizer.sh` | yes | Wrap all (or one, if given) output device(s) with a 10-band ALSA EQ, updating `mpd.conf` to match, and install the `mpd-eq` save/load helper. |
 | `install-alsaequal-web-api.sh` | yes (via sudo) | Clone/update and install [alsaequal-web-api](https://github.com/bonelifer/alsaequal-web-api) as the `eqctl` systemd service. |
 | `install-gpodder-cli.sh` | yes (via sudo) | Install `gpo` (gPodder CLI) and operation helper scripts into the invoking user's `~/bin`. |
 
@@ -158,11 +164,17 @@ you to the menu so you can retry or move on.
   `8090`.
 - `setup-alsa-equalizer.sh` writes/overwrites `/etc/asound.conf`,
   backing up any existing copy first (`/etc/asound.conf.bak.<timestamp>`)
-  since it's a shared system-wide file. `libasound2-plugin-equal` (the
-  package formerly named `alsaequal`) stores band gains in an opaque
-  binary file, editable only through an ALSA mixer — `mpd-eq` works
-  around that by round-tripping the same controls through `amixer` as
-  plain "name:value" text profiles under
+  since it's a shared system-wide file. In auto-detect mode (no
+  argument) it also backs up and rewrites `/etc/mpd.conf`
+  (`/etc/mpd.conf.bak.<timestamp>`) — the only script in this project
+  that touches `mpd.conf` directly, everywhere else prints instructions
+  for you to apply by hand. Every wrapped output shares one `ctl.equal`
+  control surface, so `mpd-eq`/`alsaequal-web-api` apply one EQ curve to
+  all of them at once rather than each having independent settings.
+  `libasound2-plugin-equal` (the package formerly named `alsaequal`)
+  stores band gains in an opaque binary file, editable only through an
+  ALSA mixer — `mpd-eq` works around that by round-tripping the same
+  controls through `amixer` as plain "name:value" text profiles under
   `/var/lib/mpd/alsaequal/profiles/`.
 - `install-alsaequal-web-api.sh` is a thin wrapper: it only clones/updates
   the repo and delegates to that project's own `install.sh`, rather than
