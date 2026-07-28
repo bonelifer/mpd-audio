@@ -81,7 +81,14 @@ you to the menu so you can retry or move on.
     ALSA devices (`aplay -L`) and prompts for one (30 second timeout, no
     default — aborts if left unanswered). Point `mpd.conf`'s local
     `audio_output` at `device "equal"` afterward.
-13. **`install-gpodder-cli.sh [DOWNLOAD_DIR]`** *(optional)* — installs
+13. **`install-alsaequal-web-api.sh`** *(optional)* — run *after*
+    `setup-alsa-equalizer.sh`. Clones (or updates)
+    [alsaequal-web-api](https://github.com/bonelifer/alsaequal-web-api)
+    to `~/alsaequal-web-api` and runs its own installer, which sets up a
+    browser/HTTP front-end (port 5000) for applying the same named EQ
+    presets as `mpd-eq`, as a systemd service (`eqctl`). Requires editing
+    `~/bin/eqctl.env` with real credentials before use.
+14. **`install-gpodder-cli.sh [DOWNLOAD_DIR]`** *(optional)* — installs
     `gpo`, the text-mode CLI for [gPodder](https://gpodder.org/), plus
     operation helper scripts (`gpo-login`, `gpo-update`, `gpo-download`,
     `gpo-subscribe`, `gpo-unsubscribe`, `gpo-list`, `gpo-info`,
@@ -109,6 +116,7 @@ you to the menu so you can retry or move on.
 | `setup-log-rotation.sh` | yes | Install a `logrotate` policy for MPD's log file. |
 | `install-mpd2chromecast.sh` | yes (via sudo) | Install mpd2chromecast and register it as a systemd service for Chromecast/Google Home playback. |
 | `setup-alsa-equalizer.sh` | yes | Wrap an output device with a 10-band ALSA EQ and install the `mpd-eq` save/load helper. |
+| `install-alsaequal-web-api.sh` | yes (via sudo) | Clone/update and install [alsaequal-web-api](https://github.com/bonelifer/alsaequal-web-api) as the `eqctl` systemd service. |
 | `install-gpodder-cli.sh` | yes (via sudo) | Install `gpo` (gPodder CLI) and operation helper scripts into the invoking user's `~/bin`. |
 
 ## Notes
@@ -154,6 +162,11 @@ you to the menu so you can retry or move on.
   around that by round-tripping the same controls through `amixer` as
   plain "name:value" text profiles under
   `/var/lib/mpd/alsaequal/profiles/`.
+- `install-alsaequal-web-api.sh` is a thin wrapper: it only clones/updates
+  the repo and delegates to that project's own `install.sh`, rather than
+  duplicating its apt/systemd setup here. It doesn't wire the ALSA
+  `equal` device itself — that's `setup-alsa-equalizer.sh`'s job, and
+  must run first.
 - `install-gpodder-cli.sh` avoids Debian's `gpodder` apt package
   (bundles the GTK GUI, pulling in `gir1.2-gtk-3.0`/`python3-gi`/etc.
   even though `gpo` itself never imports them) by installing from source

@@ -21,6 +21,7 @@ INSTALL_MPDRIS2_SCRIPT="./install-mpdris2.sh"
 LOG_ROTATION_SCRIPT="./setup-log-rotation.sh"
 MPD2CHROMECAST_SCRIPT="./install-mpd2chromecast.sh"
 ALSA_EQUALIZER_SCRIPT="./setup-alsa-equalizer.sh"
+ALSAEQUAL_WEB_API_SCRIPT="./install-alsaequal-web-api.sh"
 GPODDER_CLI_SCRIPT="./install-gpodder-cli.sh"
 
 while true; do
@@ -39,8 +40,9 @@ while true; do
     echo "10. Run setup-log-rotation.sh"
     echo "11. Run install-mpd2chromecast.sh"
     echo "12. Run setup-alsa-equalizer.sh"
-    echo "13. Run install-gpodder-cli.sh"
-    echo "14. Quit (or press 'q' to quit)"
+    echo "13. Run install-alsaequal-web-api.sh"
+    echo "14. Run install-gpodder-cli.sh"
+    echo "15. Quit (or press 'q' to quit)"
 
     # Read the user's choice
     read -r -p "Enter the number of your choice: " choice
@@ -96,15 +98,19 @@ while true; do
             read -r -p "Press Enter to continue..."
             ;;
         13)
+            sudo "${ALSAEQUAL_WEB_API_SCRIPT}"
+            read -r -p "Press Enter to continue..."
+            ;;
+        14)
             sudo "${GPODDER_CLI_SCRIPT}"
             read -r -p "Press Enter to continue..."
             ;;
-        14|q)
+        15|q)
             echo "Goodbye!"
             exit 0
             ;;
         *)
-            echo "Invalid choice. Please enter a valid option (1-14 or 'q')."
+            echo "Invalid choice. Please enter a valid option (1-15 or 'q')."
             read -r -p "Press Enter to continue..."
             ;;
     esac
