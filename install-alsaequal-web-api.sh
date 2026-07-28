@@ -8,10 +8,9 @@
 # Clones the repo into the invoking user's home directory (or pulls the
 # latest changes if already cloned), then delegates to its own
 # install.sh, which installs apt dependencies, copies app.py to
-# ~/bin/, creates ~/bin/eqctl.env from a template on first install, and
-# installs/starts the "eqctl" systemd service under the invoking user.
-# Safe to re-run: pulls the latest source and reinstalls instead of
-# failing on an existing clone.
+# ~/bin/, and installs/starts the "eqctl" systemd service under the
+# invoking user. Safe to re-run: pulls the latest source and reinstalls
+# instead of failing on an existing clone.
 #
 # Run this *after* setup-alsa-equalizer.sh: alsaequal-web-api's presets
 # are applied via the same "equal" ALSA device that script wires up, and
@@ -22,17 +21,20 @@
 #   sudo ./install-alsaequal-web-api.sh
 #
 # Inputs:
-#   None. Must be run via sudo (so $SUDO_USER identifies the real user
-#   whose ~/bin and systemd service get installed - install.sh itself
-#   expects the same).
+#   None (interactive). Must be run via sudo (so $SUDO_USER identifies
+#   the real user whose ~/bin and systemd service get installed -
+#   install.sh itself expects the same). On first install, install.sh
+#   prompts for the HTTP Basic Auth username/password the service will
+#   require - have those ready before running this non-interactively is
+#   not supported.
 #
 # Outputs:
 #   Clones/updates ~<user>/alsaequal-web-api. Runs its install.sh, which
 #   installs python3-cherrypy3, libasound2-plugin-equal, and alsa-utils
-#   via apt, copies app.py to ~<user>/bin/, creates
-#   ~<user>/bin/eqctl.env from a template on first install (leaving it
-#   untouched on later reinstalls - edit it and set real credentials
-#   before use), and installs/starts the "eqctl" systemd service.
+#   via apt, copies app.py to ~<user>/bin/, prompts for and writes real
+#   credentials to ~<user>/bin/eqctl.env on first install (leaving it
+#   untouched on later reinstalls), and installs/starts the "eqctl"
+#   systemd service.
 #
 # Source: https://github.com/bonelifer/alsaequal-web-api
 
@@ -79,8 +81,8 @@ bash "${REPO_DIR}/install.sh"
 
 # Print a message to indicate completion
 echo
-echo "alsaequal-web-api installed. Edit ${USER_HOME}/bin/eqctl.env with real"
-echo "credentials, then: sudo systemctl restart eqctl"
-echo "Open http://$(hostname -I | cut -d' ' -f1):5000/ once configured."
+echo "alsaequal-web-api installed and running as 'eqctl'."
+echo "Open http://$(hostname -I | cut -d' ' -f1):5000/ and log in with the"
+echo "credentials you just set."
 
 exit 0

@@ -86,8 +86,10 @@ you to the menu so you can retry or move on.
     [alsaequal-web-api](https://github.com/bonelifer/alsaequal-web-api)
     to `~/alsaequal-web-api` and runs its own installer, which sets up a
     browser/HTTP front-end (port 5000) for applying the same named EQ
-    presets as `mpd-eq`, as a systemd service (`eqctl`). Requires editing
-    `~/bin/eqctl.env` with real credentials before use.
+    presets as `mpd-eq`, as a systemd service (`eqctl`). Interactive: on
+    first install it prompts for the HTTP Basic Auth username/password
+    the service will require (rejecting blank values or the placeholder
+    `changeme`), so have those ready.
 14. **`install-gpodder-cli.sh [DOWNLOAD_DIR]`** *(optional)* — installs
     `gpo`, the text-mode CLI for [gPodder](https://gpodder.org/), plus
     operation helper scripts (`gpo-login`, `gpo-update`, `gpo-download`,
