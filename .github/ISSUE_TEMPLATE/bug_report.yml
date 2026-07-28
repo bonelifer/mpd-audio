@@ -1,0 +1,48 @@
+name: Bug report
+description: Report a problem with one of the setup/install scripts
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, including what you expected instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: script
+    attributes:
+      label: Which script?
+      options:
+        - menu.sh
+        - setup-unattended-upgrades.sh
+        - grant-passwordless-sudo.sh
+        - install-apps.sh
+        - install-docker.sh
+        - setup-mergerfs.sh
+        - build-mpd.sh
+        - setup-bluetooth-audio.sh
+        - generate-mpd-conf.sh
+        - install-mympd.sh
+        - install-mpdris2.sh
+        - setup-log-rotation.sh
+        - install-mpd2chromecast.sh
+        - setup-alsa-equalizer.sh
+        - install-gpodder-cli.sh
+        - Other / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Paste any error output from the script or `journalctl -u <service>`.
+      render: shell
+  - type: input
+    id: os-version
+    attributes:
+      label: OS / distro version
+      placeholder: Debian 12
+    validations:
+      required: false

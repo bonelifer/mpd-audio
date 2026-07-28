@@ -175,3 +175,11 @@ you to the menu so you can retry or move on.
 This project is licensed under the **GNU General Public License v3.0**.
 
 See [LICENSE](LICENSE) for more information.
+
+## Contributing
+
+Contributions are welcome!
+
+- **Bug reports**: [Open an issue](https://github.com/bonelifer/mpd-audio/issues).
+- **Everything else** (questions, feature requests, ideas, general discussion): [Use Discussions](https://github.com/bonelifer/mpd-audio/discussions).
+- Pull requests are welcome for bug fixes or discussed features.
