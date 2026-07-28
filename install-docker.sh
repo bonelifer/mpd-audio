@@ -6,11 +6,13 @@
 # Reference: https://docs.docker.com/engine/install/ubuntu/
 # Postinstall reference: https://docs.docker.com/engine/install/linux-postinstall/
 #
-# After installing Docker, offers to set up "mkdc" (a bash function
+# After installing Docker, always sets up "mkdc" (a bash function
 # appended to the invoking user's ~/.bashrc) that creates or opens a
 # Docker Compose project directory under a root you choose, e.g.
-# `mkdc myproject`. Declining, or leaving the prompt unanswered, skips
-# it - Docker itself is still installed either way.
+# `mkdc myproject` - it's a Docker Compose helper, so it follows Docker
+# itself rather than needing a separate opt-in. Prompts for the root
+# directory; leaving it blank (or the prompt unanswered) skips just
+# mkdc, not the Docker install.
 #
 # Usage:
 #   sudo ./install-docker.sh
@@ -22,8 +24,9 @@
 # Outputs:
 #   Installs docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin,
 #   and docker-compose-plugin. Adds $SUDO_USER to the docker group. Enables
-#   and starts the docker and containerd services. If accepted, appends
-#   the mkdc function to ~<user>/.bashrc (skipped if already present).
+#   and starts the docker and containerd services. Appends the mkdc
+#   function to ~<user>/.bashrc, unless a root directory wasn't given or
+#   the function is already present.
 
 set -euo pipefail
 
@@ -93,38 +96,30 @@ sudo -u "${SUDO_USER}" docker run hello-world
 # Print a message to indicate completion
 echo "Docker has been installed and is running as a service."
 
-# Offer to set up the mkdc helper: creates/opens a Docker Compose
-# project directory under a root you choose.
+# mkdc is a Docker Compose helper, so it's set up automatically here
+# whenever Docker is installed - no separate opt-in, just the root
+# directory it should use.
 echo
 echo "mkdc is a helper function (added to ~/.bashrc) that creates or opens"
 echo "a Docker Compose project directory under a root you choose, e.g."
 echo "\`mkdc myproject\`."
-set_up_mkdc="n"
-if read -t 30 -r -p "Set up the mkdc helper? [y/N]: " set_up_mkdc; then
-  :
-else
+homelab_root=""
+if ! read -t 30 -r -p "Docker Compose projects root directory (leave blank to skip mkdc) [30s timeout]: " homelab_root; then
   echo
-  echo "No response within 30 seconds; defaulting to No."
-fi
-
-if [[ "${set_up_mkdc,,}" == "y" || "${set_up_mkdc,,}" == "yes" ]]; then
-  homelab_root=""
-  if ! read -t 30 -r -p "Docker Compose projects root directory [30s timeout]: " homelab_root; then
-    echo
-    echo "No response within 30 seconds; skipping mkdc setup." >&2
-  elif [ -z "${homelab_root}" ]; then
-    echo "No directory entered; skipping mkdc setup." >&2
+  echo "No response within 30 seconds; skipping mkdc setup." >&2
+elif [ -z "${homelab_root}" ]; then
+  echo "No directory entered; skipping mkdc setup." >&2
+else
+  USER_HOME="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
+  USER_BASHRC="${USER_HOME}/.bashrc"
+  if [ ! -f "${USER_BASHRC}" ]; then
+    touch "${USER_BASHRC}"
+    chown "${SUDO_USER}:${SUDO_USER}" "${USER_BASHRC}"
+  fi
+  if grep -q '^function mkdc' "${USER_BASHRC}" 2>/dev/null; then
+    echo "mkdc function already present in ${USER_BASHRC}."
   else
-    USER_HOME="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
-    USER_BASHRC="${USER_HOME}/.bashrc"
-    if [ ! -f "${USER_BASHRC}" ]; then
-      touch "${USER_BASHRC}"
-      chown "${SUDO_USER}:${SUDO_USER}" "${USER_BASHRC}"
-    fi
-    if grep -q '^function mkdc' "${USER_BASHRC}" 2>/dev/null; then
-      echo "mkdc function already present in ${USER_BASHRC}."
-    else
-      cat <<'EOF' >> "${USER_BASHRC}"
+    cat <<'EOF' >> "${USER_BASHRC}"
 
 function mkdc {
     # ------------------------------------------------------------------------------
@@ -171,10 +166,9 @@ function mkdc {
     echo "✓ Project created and opened in Thunar"
 }
 EOF
-      sed -i "s|__HOMELAB_ROOT__|${homelab_root}|" "${USER_BASHRC}"
-      chown "${SUDO_USER}:${SUDO_USER}" "${USER_BASHRC}"
-      echo "Added mkdc function to ${USER_BASHRC}."
-    fi
+    sed -i "s|__HOMELAB_ROOT__|${homelab_root}|" "${USER_BASHRC}"
+    chown "${SUDO_USER}:${SUDO_USER}" "${USER_BASHRC}"
+    echo "Added mkdc function to ${USER_BASHRC}."
   fi
 fi
 

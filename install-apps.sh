@@ -11,14 +11,16 @@
 #   sudo ./install-apps.sh
 #
 # Inputs:
-#   None. Must be run via sudo (so $SUDO_USER identifies the real user
-#   whose ~/bin directory gets created). Expects install-docker.sh to be
-#   present in the same directory as this script.
+#   None, except an interactive y/n prompt (30 second timeout, defaults
+#   to No) asking whether to install Docker via install-docker.sh. Must
+#   be run via sudo (so $SUDO_USER identifies the real user whose ~/bin
+#   directory gets created). Expects install-docker.sh to be present in
+#   the same directory as this script.
 #
 # Outputs:
 #   Creates ~<user>/bin for the invoking user. Installs the mpc package.
-#   Runs install-docker.sh to install Docker (which itself offers to set
-#   up the mkdc Compose-project helper).
+#   If accepted, runs install-docker.sh to install Docker (which itself
+#   sets up the mkdc Compose-project helper).
 
 set -euo pipefail
 
@@ -55,12 +57,24 @@ else
   echo "mpc is already installed."
 fi
 
-# Install Docker via install-docker.sh
-DOCKER_INSTALL_SCRIPT="${SCRIPT_DIR}/install-docker.sh"
-if [ -x "${DOCKER_INSTALL_SCRIPT}" ]; then
-  "${DOCKER_INSTALL_SCRIPT}"
+# Ask whether to install Docker via install-docker.sh
+install_docker="n"
+if read -t 30 -r -p "Install Docker (via install-docker.sh)? [y/N]: " install_docker; then
+  :
 else
-  echo "Warning: ${DOCKER_INSTALL_SCRIPT} not found or not executable; skipping Docker install." >&2
+  echo
+  echo "No response within 30 seconds; defaulting to No."
+fi
+
+if [[ "${install_docker,,}" == "y" || "${install_docker,,}" == "yes" ]]; then
+  DOCKER_INSTALL_SCRIPT="${SCRIPT_DIR}/install-docker.sh"
+  if [ -x "${DOCKER_INSTALL_SCRIPT}" ]; then
+    "${DOCKER_INSTALL_SCRIPT}"
+  else
+    echo "Warning: ${DOCKER_INSTALL_SCRIPT} not found or not executable; skipping Docker install." >&2
+  fi
+else
+  echo "Skipping Docker install."
 fi
 
 # Print a message to indicate completion
