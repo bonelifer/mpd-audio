@@ -259,12 +259,6 @@ you to the menu so you can retry or move on.
   `DOWNLOAD_DIR` gets baked into `gpo-update`/`gpo-download` as an
   `export` line rather than passed to `gpo` as a config setting.
 
-## License
-
-This project is licensed under the **GNU General Public License v3.0**.
-
-See [LICENSE](LICENSE) for more information.
-
 ## Contributing
 
 Contributions are welcome!
@@ -272,3 +266,9 @@ Contributions are welcome!
 - **Bug reports**: [Open an issue](https://github.com/bonelifer/mpd-audio/issues).
 - **Everything else** (questions, feature requests, ideas, general discussion): [Use Discussions](https://github.com/bonelifer/mpd-audio/discussions).
 - Pull requests are welcome for bug fixes or discussed features.
+
+## License
+
+This project is licensed under the **GNU General Public License v3.0**.
+
+See [LICENSE](LICENSE) for more information.
