@@ -1,0 +1,13 @@
+# install-docker.sh configuration.
+#
+# Not required - if this file doesn't exist, install-docker.sh prompts
+# for HOMELAB_ROOT interactively and creates this file itself from your
+# answer, so future runs don't ask again. Copy this file to
+# install-docker.conf yourself instead if you'd rather set it in
+# advance (e.g. for unattended provisioning) and skip the prompt.
+# install-docker.conf is gitignored either way.
+
+# Root directory the mkdc helper function (appended to the invoking
+# user's ~/.bashrc) creates/opens Docker Compose project directories
+# under, e.g. `mkdc myproject` -> $HOMELAB_ROOT/myproject.
+HOMELAB_ROOT="/media/william/NewData/homelab"

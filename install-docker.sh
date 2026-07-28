@@ -10,23 +10,29 @@
 # appended to the invoking user's ~/.bashrc) that creates or opens a
 # Docker Compose project directory under a root you choose, e.g.
 # `mkdc myproject` - it's a Docker Compose helper, so it follows Docker
-# itself rather than needing a separate opt-in. Prompts for the root
-# directory; leaving it blank (or the prompt unanswered) skips just
-# mkdc, not the Docker install.
+# itself rather than needing a separate opt-in. The root directory comes
+# from install-docker.conf if present; otherwise it's prompted for once
+# and saved there, so re-running this script doesn't ask again. Leaving
+# the prompt blank (or unanswered) skips just mkdc, not the Docker
+# install, and nothing is saved.
 #
 # Usage:
 #   sudo ./install-docker.sh
 #
 # Inputs:
-#   None. Must be run via sudo (so $SUDO_USER identifies the real user to
-#   add to the docker group and whose ~/.bashrc mkdc may be added to).
+#   None required. Reads HOMELAB_ROOT from install-docker.conf if it
+#   exists (see install-docker.conf.example); otherwise prompts for it
+#   interactively (30 second timeout). Must be run via sudo (so
+#   $SUDO_USER identifies the real user to add to the docker group and
+#   whose ~/.bashrc mkdc may be added to).
 #
 # Outputs:
 #   Installs docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin,
 #   and docker-compose-plugin. Adds $SUDO_USER to the docker group. Enables
 #   and starts the docker and containerd services. Appends the mkdc
-#   function to ~<user>/.bashrc, unless a root directory wasn't given or
-#   the function is already present.
+#   function to ~<user>/.bashrc, unless no root directory was ever given
+#   or the function is already present. Writes install-docker.conf on
+#   first successful prompt.
 
 set -euo pipefail
 
@@ -98,16 +104,32 @@ echo "Docker has been installed and is running as a service."
 
 # mkdc is a Docker Compose helper, so it's set up automatically here
 # whenever Docker is installed - no separate opt-in, just the root
-# directory it should use.
-echo
-echo "mkdc is a helper function (added to ~/.bashrc) that creates or opens"
-echo "a Docker Compose project directory under a root you choose, e.g."
-echo "\`mkdc myproject\`."
+# directory it should use. That directory is read from install-docker.conf
+# if it exists (skipping the prompt entirely); otherwise it's prompted
+# for once and saved there, so re-running this script doesn't ask again.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="${SCRIPT_DIR}/install-docker.conf"
 homelab_root=""
-if ! read -t 30 -r -p "Docker Compose projects root directory (leave blank to skip mkdc) [30s timeout]: " homelab_root; then
+if [ -f "${CONFIG_FILE}" ]; then
+  # shellcheck source=/dev/null
+  source "${CONFIG_FILE}"
+  homelab_root="${HOMELAB_ROOT:-}"
+  echo "Using HOMELAB_ROOT from ${CONFIG_FILE}: ${homelab_root}"
+else
   echo
-  echo "No response within 30 seconds; skipping mkdc setup." >&2
-elif [ -z "${homelab_root}" ]; then
+  echo "mkdc is a helper function (added to ~/.bashrc) that creates or opens"
+  echo "a Docker Compose project directory under a root you choose, e.g."
+  echo "\`mkdc myproject\`."
+  if ! read -t 30 -r -p "Docker Compose projects root directory (leave blank to skip mkdc) [30s timeout]: " homelab_root; then
+    echo
+    echo "No response within 30 seconds; skipping mkdc setup." >&2
+  elif [ -n "${homelab_root}" ]; then
+    printf 'HOMELAB_ROOT="%s"\n' "${homelab_root}" > "${CONFIG_FILE}"
+    echo "Saved HOMELAB_ROOT to ${CONFIG_FILE} for future runs."
+  fi
+fi
+
+if [ -z "${homelab_root}" ]; then
   echo "No directory entered; skipping mkdc setup." >&2
 else
   USER_HOME="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"

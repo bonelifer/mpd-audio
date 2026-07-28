@@ -26,6 +26,13 @@ future update to the scripts. `MERGERFS_SOURCE_DIRS`/`MERGERFS_TARGET_DIR`
 must be changed from their placeholder values; everything else has a
 working default.
 
+`install-docker.sh`'s `HOMELAB_ROOT` (used by the `mkdc` helper it sets
+up) works differently: you don't need to copy anything in advance - the
+script prompts for it on first run and writes `install-docker.conf`
+itself, so later runs don't ask again. Copy
+`install-docker.conf.example` yourself only if you want to skip the
+prompt entirely (e.g. for unattended provisioning).
+
 ## Quick start
 
 ```bash
@@ -47,9 +54,11 @@ you to the menu so you can retry or move on.
 3. **`install-apps.sh`** — creates `~/bin` for the invoking user and
    installs `mpc`, then prompts (30 second timeout, defaults to No)
    whether to also install Docker via `install-docker.sh` (which itself
-   sets up the `mkdc` Compose-project helper). Other scripts assume
-   `~/bin` and `mpc` are present; only proceed with Docker-dependent
-   scripts if you accepted the Docker install.
+   sets up the `mkdc` Compose-project helper, prompting for its root
+   directory on first run and remembering it in `install-docker.conf`
+   afterward). Other scripts assume `~/bin` and `mpc` are present; only
+   proceed with Docker-dependent scripts if you accepted the Docker
+   install.
 4. **`setup-mergerfs.sh`** — reads `MERGERFS_SOURCE_DIRS`/`MERGERFS_TARGET_DIR`
    from `mpd-audio.conf` (see Configuration above; refuses to run if
    they're still the placeholder values). Installs MergerFS and
