@@ -26,6 +26,10 @@ future update to the scripts. `MERGERFS_SOURCE_DIRS`/`MERGERFS_TARGET_DIR`
 must be changed from their placeholder values; everything else has a
 working default.
 
+`install-apps.sh` reads its own separate `install-apps.conf` (same
+pattern - copy `install-apps.conf.example` and edit `HOMELAB_ROOT`
+first), since its one setting isn't related to MPD.
+
 ## Quick start
 
 ```bash
@@ -44,10 +48,12 @@ you to the menu so you can retry or move on.
 2. **`grant-passwordless-sudo.sh`** — adds the invoking user to the `sudo`
    group and grants passwordless sudo (`/etc/sudoers.d/nopasswd_for_user`).
    Run with `sudo` as the target user, not directly as root.
-3. **`install-apps.sh`** — creates `~/bin` for the invoking user, appends
-   the `mkdc` helper function to their `~/.bashrc`, then installs `mpc`
-   and Docker (via `install-docker.sh`). Other scripts assume these are
-   present.
+3. **`install-apps.sh`** — copy `install-apps.conf.example` to
+   `install-apps.conf` and set `HOMELAB_ROOT` first. Creates `~/bin` for
+   the invoking user, appends the `mkdc` helper function (which creates
+   Docker Compose project directories under `HOMELAB_ROOT`) to their
+   `~/.bashrc`, then installs `mpc` and Docker (via `install-docker.sh`).
+   Other scripts assume these are present.
 4. **`setup-mergerfs.sh`** — reads `MERGERFS_SOURCE_DIRS`/`MERGERFS_TARGET_DIR`
    from `mpd-audio.conf` (see Configuration above; refuses to run if
    they're still the placeholder values). Installs MergerFS and

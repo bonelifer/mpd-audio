@@ -11,9 +11,11 @@
 #   sudo ./install-apps.sh
 #
 # Inputs:
-#   None. Must be run via sudo (so $SUDO_USER identifies the real user
-#   whose ~/bin directory and ~/.bashrc get updated). Expects
-#   install-docker.sh to be present in the same directory as this script.
+#   None. Reads HOMELAB_ROOT from install-apps.conf (copy
+#   install-apps.conf.example to install-apps.conf and edit it first).
+#   Must be run via sudo (so $SUDO_USER identifies the real user whose
+#   ~/bin directory and ~/.bashrc get updated). Expects install-docker.sh
+#   to be present in the same directory as this script.
 #
 # Outputs:
 #   Creates ~<user>/bin for the invoking user. Appends the `mkdc` helper
@@ -36,6 +38,15 @@ fi
 USER_HOME="$(getent passwd "${SUDO_USER}" | cut -d: -f6)"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load HOMELAB_ROOT from this script's own config file
+CONFIG_FILE="${SCRIPT_DIR}/install-apps.conf"
+if [ ! -f "${CONFIG_FILE}" ]; then
+  echo "${CONFIG_FILE} not found. Copy install-apps.conf.example to install-apps.conf and edit it, then re-run." >&2
+  exit 1
+fi
+# shellcheck source=/dev/null
+source "${CONFIG_FILE}"
 
 # Create the invoking user's personal bin directory, if it doesn't exist
 USER_BIN_DIR="${USER_HOME}/bin"
@@ -66,7 +77,7 @@ function mkdc {
     # - Opens directory in Thunar file manager
     # ------------------------------------------------------------------------------
 
-    local base_dir="/media/william/NewData/homelab"
+    local base_dir="__HOMELAB_ROOT__"
     local folder_name="$1"
 
     # Validate argument
@@ -104,6 +115,7 @@ function mkdc {
     echo "✓ Project created and opened in Thunar"
 }
 EOF
+  sed -i "s|__HOMELAB_ROOT__|${HOMELAB_ROOT}|" "${USER_BASHRC}"
   chown "${SUDO_USER}:${SUDO_USER}" "${USER_BASHRC}"
   echo "Added mkdc function to ${USER_BASHRC}."
 fi
