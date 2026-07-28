@@ -26,10 +26,6 @@ future update to the scripts. `MERGERFS_SOURCE_DIRS`/`MERGERFS_TARGET_DIR`
 must be changed from their placeholder values; everything else has a
 working default.
 
-`install-apps.sh` reads its own separate `install-apps.conf` (same
-pattern - copy `install-apps.conf.example` and edit `HOMELAB_ROOT`
-first), since its one setting isn't related to MPD.
-
 ## Quick start
 
 ```bash
@@ -48,12 +44,10 @@ you to the menu so you can retry or move on.
 2. **`grant-passwordless-sudo.sh`** — adds the invoking user to the `sudo`
    group and grants passwordless sudo (`/etc/sudoers.d/nopasswd_for_user`).
    Run with `sudo` as the target user, not directly as root.
-3. **`install-apps.sh`** — copy `install-apps.conf.example` to
-   `install-apps.conf` and set `HOMELAB_ROOT` first. Creates `~/bin` for
-   the invoking user, appends the `mkdc` helper function (which creates
-   Docker Compose project directories under `HOMELAB_ROOT`) to their
-   `~/.bashrc`, then installs `mpc` and Docker (via `install-docker.sh`).
-   Other scripts assume these are present.
+3. **`install-apps.sh`** — creates `~/bin` for the invoking user, installs
+   `mpc`, then installs Docker (via `install-docker.sh`, which itself
+   prompts whether to also set up the `mkdc` helper). Other scripts
+   assume these are present.
 4. **`setup-mergerfs.sh`** — reads `MERGERFS_SOURCE_DIRS`/`MERGERFS_TARGET_DIR`
    from `mpd-audio.conf` (see Configuration above; refuses to run if
    they're still the placeholder values). Installs MergerFS and
@@ -146,8 +140,8 @@ you to the menu so you can retry or move on.
 | `menu.sh` | — | Interactive menu that runs the other scripts. |
 | `setup-unattended-upgrades.sh` | yes | Enable automatic security updates. |
 | `grant-passwordless-sudo.sh` | yes (via sudo) | Add invoking user to `sudo` group with NOPASSWD. |
-| `install-apps.sh` | yes (via sudo) | Create invoking user's `~/bin`; add `mkdc` function to their `~/.bashrc`; install `mpc`; delegates to `install-docker.sh`. |
-| `install-docker.sh` | yes (via sudo) | Install Docker CE from the official apt repo; add invoking user to the `docker` group. |
+| `install-apps.sh` | yes (via sudo) | Create invoking user's `~/bin`; install `mpc`; delegates to `install-docker.sh`. |
+| `install-docker.sh` | yes (via sudo) | Install Docker CE from the official apt repo; add invoking user to the `docker` group; optionally add the `mkdc` helper to their `~/.bashrc`. |
 | `setup-mergerfs.sh` | yes | Pool storage directories with MergerFS as a systemd service. |
 | `build-mpd.sh` | yes | Compile and install MPD from source (meson/ninja). |
 | `setup-bluetooth-audio.sh` | yes | Pair a Bluetooth A2DP device, install BlueALSA, and add/update its `audio_output` in `mpd.conf` if the file exists. |
