@@ -92,8 +92,14 @@ you to the menu so you can retry or move on.
    software mixing (`mixer_type "software"`) across all local ALSA
    outputs for a consistent volume curve, and, per Bluetooth device
    found, whether to include it. Each prompt times out (defaulting to
-   No) if left unanswered. Does not need root. Review the generated
-   file, then copy it to `/etc/mpd.conf` yourself.
+   No) if left unanswered. Does not need root (only the final copy step
+   does, if `/etc/mpd.conf` isn't already writable by you). Finally
+   prompts whether to copy the result to `/etc/mpd.conf` now; if it
+   already exists there, it's backed up first, since
+   `setup-bluetooth-audio.sh`/`setup-alsa-equalizer.sh` may have edited
+   it directly since the last time you ran this script. Declining (or
+   the timeout) leaves it for you to review and copy yourself, same as
+   before.
 8. **`install-mympd.sh`** — clones, builds, and installs myMPD (web UI for
    MPD) from source, and registers it as the `mympd` systemd service.
 9. **`install-mpdris2.sh`** — run *after* `mpd.conf` is generated and
@@ -156,7 +162,7 @@ you to the menu so you can retry or move on.
 | `setup-mergerfs.sh` | yes | Pool storage directories with MergerFS as a systemd service. |
 | `build-mpd.sh` | yes | Compile and install MPD from source (meson/ninja). |
 | `setup-bluetooth-audio.sh` | yes | Pair a Bluetooth A2DP device, install BlueALSA, and add/update its `audio_output` in `mpd.conf` if the file exists. |
-| `generate-mpd-conf.sh` | no | Detect audio hardware and generate `./mpd.conf`. |
+| `generate-mpd-conf.sh` | no* | Detect audio hardware, generate `./mpd.conf`, and optionally copy it to `/etc/mpd.conf` (*needs root for that step if not already writable). |
 | `install-mympd.sh` | yes | Build/install myMPD and register its systemd service. |
 | `install-mpdris2.sh` | yes (via sudo) | Build/install mpDris2 and write its per-user config. |
 | `setup-log-rotation.sh` | yes | Install a `logrotate` policy for MPD's log file. |
@@ -173,8 +179,10 @@ you to the menu so you can retry or move on.
 - `build-mpd.sh` and `install-mympd.sh` build from source and install to the
   default prefix (typically `/usr/local`); re-running `install-mympd.sh`
   pulls the latest upstream changes and rebuilds.
-- `generate-mpd-conf.sh` never touches `/etc/mpd.conf` directly — it only
-  writes to the current directory so you can review the result first.
+- `generate-mpd-conf.sh` always writes to `./mpd.conf` in the current
+  directory first, so you can review it either way. Copying it to
+  `/etc/mpd.conf` is opt-in (a y/n prompt, 30 second timeout, defaults
+  to No) rather than automatic.
 - `generate-mpd-conf.sh` only offers Bluetooth devices already paired
   (e.g. via `setup-bluetooth-audio.sh` or manually with `bluetoothctl`)
   that advertise the A2DP "Audio Sink" service — it doesn't pair new

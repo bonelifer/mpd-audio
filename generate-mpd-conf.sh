@@ -322,6 +322,45 @@ ${local_audio_output}"
 
 # Output the combined configuration to mpd.conf
 echo "${mpd_conf}" > mpd.conf
-echo "Generated ./mpd.conf. Review it, then copy it to /etc/mpd.conf."
+echo "Generated ./mpd.conf."
+
+# Offer to copy it into place. Declining (or timing out) leaves the
+# previous manual review-and-copy step available, unchanged.
+MPD_CONF_LIVE="/etc/mpd.conf"
+copy_to_etc="n"
+if read -t 30 -r -p "Copy ./mpd.conf to ${MPD_CONF_LIVE} now? [y/N]: " copy_to_etc; then
+  :
+else
+  echo
+  echo "No response within 30 seconds; defaulting to No."
+fi
+
+if [[ "${copy_to_etc,,}" == "y" || "${copy_to_etc,,}" == "yes" ]]; then
+  can_write=1
+  if [ -f "${MPD_CONF_LIVE}" ]; then
+    [ -w "${MPD_CONF_LIVE}" ] || can_write=0
+  else
+    [ -w "$(dirname "${MPD_CONF_LIVE}")" ] || can_write=0
+  fi
+
+  if [ "${can_write}" -eq 0 ]; then
+    echo "No permission to write ${MPD_CONF_LIVE}. Re-run with sudo for this step, or:" >&2
+    echo "  sudo cp mpd.conf ${MPD_CONF_LIVE}" >&2
+  else
+    if [ -f "${MPD_CONF_LIVE}" ]; then
+      BACKUP_FILE="${MPD_CONF_LIVE}.bak.$(date +%Y%m%d%H%M%S)"
+      cp "${MPD_CONF_LIVE}" "${BACKUP_FILE}"
+      echo "Backed up existing ${MPD_CONF_LIVE} to ${BACKUP_FILE}."
+      echo "Note: this overwrites any audio_output changes"
+      echo "setup-bluetooth-audio.sh or setup-alsa-equalizer.sh made directly"
+      echo "to ${MPD_CONF_LIVE} - re-run them afterward if you need those back."
+    fi
+    cp mpd.conf "${MPD_CONF_LIVE}"
+    echo "Copied ./mpd.conf to ${MPD_CONF_LIVE}. Restart mpd to pick it up:"
+    echo "  sudo systemctl restart mpd"
+  fi
+else
+  echo "Review ./mpd.conf, then copy it to ${MPD_CONF_LIVE} yourself."
+fi
 
 exit 0
