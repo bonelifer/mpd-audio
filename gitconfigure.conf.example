@@ -1,0 +1,13 @@
+# gitconfigure.conf - Git global identity for install-apps.sh.
+#
+# Copy this file to gitconfigure.conf (same directory) and edit the
+# values for your system, then run install-apps.sh. gitconfigure.conf
+# is gitignored, so local edits never conflict with a future update to
+# the scripts themselves.
+#
+# If gitconfigure.conf is absent, or either value below is left empty,
+# install-apps.sh prompts for it interactively and saves your answer
+# back to this file for future runs.
+
+GIT_USER_NAME=""
+GIT_USER_EMAIL=""
